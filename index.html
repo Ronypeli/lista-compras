@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Lista de compras</title>
 <meta name="theme-color" content="#1b5e3b">
 <link rel="manifest" href="manifest.json">
@@ -67,6 +67,10 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 #toast.on{opacity:1}
 #chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
 #chips:empty{display:none}
+#chips .ed{color:var(--acc);font-weight:600;border-color:var(--acc);background:none}
+#chips .chip{flex:none;display:flex;background:var(--surf);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+#chips .chip button{border:0;border-radius:0;padding:7px 10px;background:none;font-size:14px}
+#chips .chip button+button{color:var(--mute);padding-left:4px}
 #chips button{flex:none;background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:7px 12px;font-size:14px}
 </style>
 </head>
@@ -137,6 +141,7 @@ const CATS=[
 const cat=t=>{const s=norm(t);return CATS.find(c=>c.r&&c.r.test(s))||CATS[CATS.length-1]};
 const EM={manzana:'🍎',platano:'🍌',naranja:'🍊',limon:'🍋',tomate:'🍅',zanahoria:'🥕',patata:'🥔',cebolla:'🧅',ajo:'🧄',lechuga:'🥬',pollo:'🍗',carne:'🥩',pescado:'🐟',huevo:'🥚',leche:'🥛',queso:'🧀',pan:'🍞',arroz:'🍚',pasta:'🍝',agua:'💧',cerveza:'🍺',vino:'🍷',cafe:'☕',aceite:'🫒',galleta:'🍪',yogur:'🥣',aguacate:'🥑',fresa:'🍓',uva:'🍇',sandia:'🍉',chocolate:'🍫',helado:'🍦',papel:'🧻',jabon:'🧼',pizza:'🍕'};
 const emo=(t,c)=>{for(const x of norm(t).split(/\s+/)){const k=Object.keys(EM).find(k=>x===k||x===k+'s'||x===k+'es');if(k)return EM[k]}return c.e};
+let editing=false;
 function render(){
   const l=cur();S.cur=l.id;
   sel.replaceChildren(...S.lists.map(x=>el('option',{value:x.id,textContent:x.name,selected:x.id===l.id})));
@@ -171,10 +176,20 @@ function render(){
   empty.hidden=tot>0;
   dl.replaceChildren(...S.hist.slice(0,60).map(h=>el('option',{value:h})));
   const have=new Set(todo.map(i=>norm(i.t)));
-  chips.replaceChildren(...S.hist.filter(h=>!have.has(norm(h))).slice(0,10).map(h=>{
-    const b=el('button',{type:'button',textContent:emo(h,cat(h))+' '+h});
-    b.onclick=()=>{addItem(h);render()};return b;
-  }));
+  const hs=editing?S.hist.slice(0,40):S.hist.filter(h=>!have.has(norm(h))).slice(0,10);
+  const cs=hs.map(h=>{
+    const lab=emo(h,cat(h))+' '+h;
+    if(!editing){const b=el('button',{type:'button',textContent:lab});b.onclick=()=>{addItem(h);render()};return b}
+    const w=el('div',{className:'chip'});
+    const e=el('button',{type:'button',textContent:lab+' \u270e'});
+    e.onclick=async()=>{const n=await ask('Editar art\u00edculo',h);if(n){S.hist=S.hist.map(x=>x===h?n:x).filter((x,i,a)=>a.indexOf(x)===i);render()}};
+    const d=el('button',{type:'button',textContent:'\u2715'});
+    d.setAttribute('aria-label','Quitar '+h);
+    d.onclick=()=>{S.hist=S.hist.filter(x=>x!==h);render()};
+    w.append(e,d);return w;
+  });
+  if(S.hist.length){const t=el('button',{type:'button',className:'ed',textContent:editing?'Listo':'\u270e Editar'});t.onclick=()=>{editing=!editing;render()};cs.unshift(t)}
+  chips.replaceChildren(...cs);
   save();
 }
 
@@ -239,6 +254,8 @@ menu.onclick=async e=>{
   }
 };
 render();
+if(window.visualViewport){const vv=window.visualViewport;const fit=()=>{document.documentElement.style.height=vv.height+'px';window.scrollTo(0,0)};vv.addEventListener('resize',fit);vv.addEventListener('scroll',fit);fit()}
+inp.addEventListener('focus',()=>setTimeout(()=>inp.scrollIntoView({block:'nearest'}),300));
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
