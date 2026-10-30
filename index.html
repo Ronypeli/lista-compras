@@ -67,6 +67,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
 #toast.on{opacity:1}
 #chips{display:flex;gap:8px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
 #chips:empty{display:none}
+#ct{margin:0 0 12px;font-weight:600}
+#cl{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
+.co{text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);border-left:6px solid var(--c);font-size:16px}
+.co.on{background:var(--bg);font-weight:600}
+.co.auto{color:var(--acc)}
 #chips .ed{color:var(--acc);font-weight:600;border-color:var(--acc);background:none}
 #chips .chip{flex:none;display:flex;background:var(--surf);border:1px solid var(--line);border-radius:18px;overflow:hidden}
 #chips .chip button{border:0;border-radius:0;padding:7px 10px;background:none;font-size:14px}
@@ -112,6 +117,11 @@ dialog::backdrop{background:rgba(0,0,0,.45)}
     </div>
   </form>
 </dialog>
+<dialog id="cdlg">
+  <p id="ct"></p>
+  <div id="cl"></div>
+  <div class="row"><button type="button" id="cno">Cancelar</button></div>
+</dialog>
 <div id="toast" role="status"></div>
 <script>
 const $=s=>document.querySelector(s);
@@ -122,6 +132,7 @@ let S=null;
 try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
 if(!S||!Array.isArray(S.lists)||!S.lists.length){const id=uid();S={lists:[{id,name:'Mi lista',items:[]}],cur:id,hist:[]}}
 if(!Array.isArray(S.hist))S.hist=[];
+if(!S.cm||typeof S.cm!=='object')S.cm={};
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
 const cur=()=>S.lists.find(l=>l.id===S.cur)||S.lists[0];
 const el=(t,p)=>Object.assign(document.createElement(t),p||{});
@@ -129,16 +140,30 @@ const say=m=>{toast.textContent=m;toast.classList.add('on');clearTimeout(say.t);
 
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const CATS=[
- {n:'Frutas y verduras',e:'🥬',c:'#43a047',k:'manzana platano naranja limon mandarina tomate lechuga cebolla patata zanahoria fruta verdura pepino pimiento ajo fresa uva pera aguacate melon sandia espinaca calabacin brocoli champinon seta'},
- {n:'Carne y pescado',e:'🥩',c:'#e53935',k:'pollo carne ternera cerdo jamon salchicha pescado atun salmon merluza gamba chorizo bacon hamburguesa pavo lomo'},
- {n:'Lácteos y huevos',e:'🥛',c:'#1e88e5',k:'leche queso yogur mantequilla huevo nata flan'},
- {n:'Panadería y dulces',e:'🍞',c:'#fb8c00',k:'pan bollo galleta harina cereal tostada croissant magdalena chocolate helado'},
- {n:'Despensa',e:'🥫',c:'#8d6e63',k:'arroz pasta aceite sal azucar lenteja garbanzo conserva salsa cafe te fideo mayonesa vinagre'},
- {n:'Bebidas',e:'🥤',c:'#00acc1',k:'agua zumo cerveza vino refresco cola'},
- {n:'Hogar e higiene',e:'🧴',c:'#8e24aa',k:'detergente jabon papel champu lejia gel dentifrico fregona suavizante bolsa servilleta cepillo'},
+ {n:'Frutas y verduras',e:'🥬',c:'#43a047',k:'manzana platano naranja limon lima mandarina tomate lechuga cebolla patata zanahoria fruta verdura pepino pimiento ajo fresa uva pera aguacate melon sandia espinaca calabacin brocoli champinon seta mango kiwi pina cereza melocoton albaricoque pomelo ciruela higo granada coliflor berenjena puerro apio calabaza guisante rucula canonigo perejil cilantro albahaca jengibre remolacha rabano esparrago alcachofa repollo nectarina papaya boniato ensalada acelga judia'},
+ {n:'Frutos secos',e:'🥜',c:'#c9a227',k:'anacardo almendra nuez nueces cacahuete pistacho avellana pipa castana datil pasa orejon macadamia pinon coco frutos'},
+ {n:'Carne y pescado',e:'🥩',c:'#e53935',k:'pollo carne ternera cerdo jamon salchicha pescado atun salmon merluza gamba chorizo bacon hamburguesa pavo lomo pechuga muslo filete costilla cordero conejo pato sardina bacalao dorada lubina pulpo calamar mejillon langostino sepia anchoa salchichon mortadela fiambre longaniza morcilla butifarra embutido surimi trucha rape boqueron chuleta solomillo entrecot marisco almeja salami'},
+ {n:'Lácteos y huevos',e:'🥛',c:'#1e88e5',k:'leche queso yogur mantequilla huevo nata flan natillas cuajada kefir margarina requeson mozzarella parmesano batido'},
+ {n:'Panadería y dulces',e:'🍞',c:'#fb8c00',k:'pan bollo galleta harina cereal tostada croissant magdalena chocolate helado donut tarta pastel mermelada miel caramelo golosina turron nutella cacao palmera napolitana bizcocho barquillo muesli avena colacao bombon gominola sobao mantecado polvoron roscon'},
+ {n:'Despensa',e:'🥫',c:'#8d6e63',k:'arroz pasta aceite sal azucar lenteja garbanzo conserva salsa cafe te fideo mayonesa vinagre macarron espagueti tallarin cuscus quinoa caldo sopa especia pimienta oregano comino pimenton laurel azafran canela legumbre aceituna pepinillo encurtido ketchup mostaza alubia pure sazonador levadura gelatina maicena'},
+ {n:'Bebidas',e:'🥤',c:'#00acc1',k:'agua zumo cerveza vino refresco cola gaseosa tonica limonada sidra cava whisky ron ginebra vodka licor infusion energetica isotonica kombucha sangria tinto champan brandy'},
+ {n:'Hogar e higiene',e:'🧴',c:'#8e24aa',k:'detergente jabon papel champu lejia gel dentifrico fregona suavizante bolsa servilleta cepillo esponja estropajo lavavajillas bayeta ambientador desodorante colonia maquinilla compresa toallita pila bombilla insecticida limpiacristales fregasuelos colutorio algodon cuchilla aluminio film basura guante escoba mascarilla tampon'},
  {n:'Otros',e:'🛒',c:'#607d8b',k:''}
 ].map(c=>({...c,r:c.k?new RegExp('(^|\\s)('+c.k.split(' ').join('|')+')[a-z]{0,2}($|\\s)'):null}));
-const cat=t=>{const s=norm(t);return CATS.find(c=>c.r&&c.r.test(s))||CATS[CATS.length-1]};
+const MULTI=[
+ ['pastas? de dientes|pasta dental|panal|panales|papel de aluminio','Hogar e higiene'],
+ ['tomates? fritos?|tomate triturado|salsa de tomate','Despensa'],
+ ['leche de (almendra|avena|soja|coco|arroz)|bebida de (almendra|avena|soja|arroz)','Lácteos y huevos'],
+ ['mantequilla de (cacahuete|almendra)|crema de (cacahuete|avellana|cacao)','Despensa'],
+ ['zumos? de [a-z ]+|batidos? de [a-z ]+','Bebidas']
+].map(([r,n])=>({n,r:new RegExp('(^|\\s)('+r+')($|\\s)')}));
+const cat=t=>{
+  const s=norm(t),o=S.cm&&S.cm[s];
+  if(o){const c=CATS.find(c=>c.n===o);if(c)return c}
+  const m=MULTI.find(x=>x.r.test(s));
+  if(m)return CATS.find(c=>c.n===m.n);
+  return CATS.find(c=>c.r&&c.r.test(s))||CATS[CATS.length-1];
+};
 const EM={manzana:'🍎',platano:'🍌',naranja:'🍊',limon:'🍋',tomate:'🍅',zanahoria:'🥕',patata:'🥔',cebolla:'🧅',ajo:'🧄',lechuga:'🥬',pollo:'🍗',carne:'🥩',pescado:'🐟',huevo:'🥚',leche:'🥛',queso:'🧀',pan:'🍞',arroz:'🍚',pasta:'🍝',agua:'💧',cerveza:'🍺',vino:'🍷',cafe:'☕',aceite:'🫒',galleta:'🍪',yogur:'🥣',aguacate:'🥑',fresa:'🍓',uva:'🍇',sandia:'🍉',chocolate:'🍫',helado:'🍦',papel:'🧻',jabon:'🧼',pizza:'🍕'};
 const emo=(t,c)=>{for(const x of norm(t).split(/\s+/)){const k=Object.keys(EM).find(k=>x===k||x===k+'s'||x===k+'es');if(k)return EM[k]}return c.e};
 let editing=false;
@@ -150,7 +175,9 @@ function render(){
     const cb=el('input',{type:'checkbox',checked:i.d});
     cb.setAttribute('aria-label','Marcar '+i.t);
     cb.onchange=()=>{i.d=cb.checked;render()};
-    const av=el('div',{className:'av',textContent:emo(i.t,c)});
+    const av=el('button',{type:'button',className:'av',textContent:emo(i.t,c)});
+    av.setAttribute('aria-label','Cambiar categoría de '+i.t);
+    av.onclick=()=>pickCat(i,c);
     const t=el('span',{textContent:i.t});
     t.onclick=()=>{i.d=!i.d;render()};
     const x=el('button',{textContent:'✕'});
@@ -225,6 +252,25 @@ function ask(title,val,confirmOnly){
   });
 }
 
+const cdlg=$('#cdlg'),ct=$('#ct'),cl=$('#cl');
+$('#cno').onclick=()=>cdlg.close();
+function pickCat(i,curc){
+  ct.textContent='Categoría de «'+i.t+'»';
+  const k=norm(i.t);
+  const bs=CATS.map(c=>{
+    const b=el('button',{type:'button',className:'co'+(c===curc?' on':''),textContent:c.e+' '+c.n+(c===curc?' ✓':'')});
+    b.style.setProperty('--c',c.c);
+    b.onclick=()=>{S.cm[k]=c.n;cdlg.close();render();say('Guardado: '+i.t+' → '+c.n)};
+    return b;
+  });
+  if(S.cm[k]){
+    const r=el('button',{type:'button',className:'co auto',textContent:'↺ Volver a la automática'});
+    r.style.setProperty('--c','#9aa59d');
+    r.onclick=()=>{delete S.cm[k];cdlg.close();render()};
+    bs.push(r);
+  }
+  cl.replaceChildren(...bs);cdlg.showModal();
+}
 sel.onchange=()=>{S.cur=sel.value;render()};
 $('#bNew').onclick=async()=>{
   const n=await ask('Nueva lista','');
